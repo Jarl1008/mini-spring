@@ -4,12 +4,13 @@
 [![Stars](https://img.shields.io/github/stars/DerekYRC/mini-spring)](https://img.shields.io/github/stars/DerekYRC/mini-spring)
 [![Forks](https://img.shields.io/github/forks/DerekYRC/mini-spring)](https://img.shields.io/github/forks/DerekYRC/mini-spring)
 
-## About
 * [中文版](./README_CN.md)
+
+## About
 
 The **mini-spring** is a simplified version of the Spring framework that will help you quickly get familiar with the Spring source code and grasp the core principles of Spring. The core logic of Spring is extracted, the code is extremely simplified, and the core functions of Spring, such as IoC and AOP, resource loaders, event listeners, type conversion, container extension points, bean life cycle and scope, and application context, are retained.
 
-If this project can help you, please give a **STAR, thank you!!!**
+If this project can help you, please **STAR the project, thank you!!!**
 
 ## Contents
 #### Basics
@@ -43,10 +44,15 @@ If this project can help you, please give a **STAR, thank you!!!**
 * [Package scan](#包扫描)
 * [Value annotation](#Value)
 * [Autowired annotation](#Autowired)
-* [Type conversion](#类型转换)
+* [Type conversion(first part)](#类型转换一)
+* [Type conversion(second part)](#类型转换二)
 
 #### Advanced
-* [Solve the problem of circular dependencies](#解决循环依赖问题)
+* [Solve the problem of circular dependencies(first part): without proxy bean](#解决循环依赖问题一)
+* [Solve the problem of circular dependencies(second part): with proxy bean](#解决循环依赖问题二)
+
+#### Bug fix
+* [populate proxy bean with property values(discovered and fixed by kerwin89)](#没有为代理bean设置属性)
 
 ## Usage
 Each function point corresponds to a branch. Switch to the branch corresponding to the function point to see the new function. The incremental change point is described in the [changelog.md](https://github.com/DerekYRC/mini-spring/blob/main/changelog.md) file.

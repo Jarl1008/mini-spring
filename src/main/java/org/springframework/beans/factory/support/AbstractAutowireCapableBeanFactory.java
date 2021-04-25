@@ -3,13 +3,16 @@ package org.springframework.beans.factory.support;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.TypeUtil;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.config.*;
+import org.springframework.core.convert.ConversionService;
 
 import java.lang.reflect.Method;
 
@@ -62,9 +65,21 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	protected Object doCreateBean(String beanName, BeanDefinition beanDefinition) {
-		Object bean = null;
+		Object bean;
 		try {
 			bean = createBeanInstance(beanDefinition);
+
+			//为解决循环依赖问题，将实例化后的bean放进缓存中提前暴露
+			if (beanDefinition.isSingleton()) {
+				Object finalBean = bean;
+				addSingletonFactory(beanName, new ObjectFactory<Object>() {
+					@Override
+					public Object getObject() throws BeansException {
+						return getEarlyBeanReference(beanName, beanDefinition, finalBean);
+					}
+				});
+			}
+
 			//实例化bean之后执行
 			boolean continueWithPropertyPopulation = applyBeanPostProcessorsAfterInstantiation(beanName, bean);
 			if (!continueWithPropertyPopulation) {
@@ -83,10 +98,27 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		//注册有销毁方法的bean
 		registerDisposableBeanIfNecessary(beanName, bean, beanDefinition);
 
+		Object exposedObject = bean;
 		if (beanDefinition.isSingleton()) {
-			addSingleton(beanName, bean);
+			//如果有代理对象，此处获取代理对象
+			exposedObject = getSingleton(beanName);
+			addSingleton(beanName, exposedObject);
 		}
-		return bean;
+		return exposedObject;
+	}
+
+	protected Object getEarlyBeanReference(String beanName, BeanDefinition beanDefinition, Object bean) {
+		Object exposedObject = bean;
+		for (BeanPostProcessor bp : getBeanPostProcessors()) {
+			if (bp instanceof InstantiationAwareBeanPostProcessor) {
+				exposedObject = ((InstantiationAwareBeanPostProcessor) bp).getEarlyBeanReference(exposedObject, beanName);
+				if (exposedObject == null) {
+					return exposedObject;
+				}
+			}
+		}
+
+		return exposedObject;
 	}
 
 	/**
@@ -170,6 +202,16 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					// beanA依赖beanB，先实例化beanB
 					BeanReference beanReference = (BeanReference) value;
 					value = getBean(beanReference.getBeanName());
+				} else {
+					//类型转换
+					Class<?> sourceType = value.getClass();
+					Class<?> targetType = (Class<?>) TypeUtil.getFieldType(bean.getClass(), name);
+					ConversionService conversionService = getConversionService();
+					if (conversionService != null) {
+						if (conversionService.canConvert(sourceType, targetType)) {
+							value = conversionService.convert(value, targetType);
+						}
+					}
 				}
 
 				//通过反射设置属性
